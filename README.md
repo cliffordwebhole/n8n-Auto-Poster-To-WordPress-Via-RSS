@@ -1,5 +1,11 @@
 ![Repository Banner](./banner.png)
 
+![License](https://img.shields.io/badge/License-MIT-green)
+![Built With](https://img.shields.io/badge/Built%20With-n8n-blue)
+![WordPress](https://img.shields.io/badge/Platform-WordPress-blue)
+![AI Model](https://img.shields.io/badge/AI-Claude%203.5%20Sonnet-purple)
+![Maintainer](https://img.shields.io/badge/Maintainer-Clifford's%20Webhole-orange)
+
 # 🧠 AI-Powered WordPress Auto-Publisher (n8n Workflow)
 ### Built by **Clifford’s Webhole** for *Open Source Community*
 
