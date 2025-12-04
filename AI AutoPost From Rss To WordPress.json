@@ -1,0 +1,473 @@
+{
+  "name": "Wordpress AutoPost From Rss Feed",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "hour": 7
+            }
+          ]
+        }
+      },
+      "id": "27eaf76f-3006-47fc-8445-1e7059008b45",
+      "name": "Cron",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        -1616,
+        -2928
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "10aef17b-088b-4a75-b539-fb3788f3cbcd",
+      "name": "Limit To 1",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        -1600,
+        -2720
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const out = [];\n\nfor (const item of $input.all()) {\n  const { title, link, summary } = item.json;\n\n  if (title && link) {\n    out.push({\n      json: {\n        title,\n        link,\n        summary: summary || \"\"\n      }\n    });\n  }\n}\n\nreturn out;"
+      },
+      "id": "cf9a6bca-3f46-4f55-93c6-3ece7555ebdf",
+      "name": "Normalize & Validate",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -1408,
+        -2720
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const out = [];\n\nfor (const item of $input.all()) {\n  const j = item.json;\n\n  const body = {\n    model: \"anthropic/claude-3.5-sonnet\",\n    messages: [\n      {\n        role: \"user\",\n        content:\n          \"You are writing for Example.com - a professional publication about (enter your niche), art, preservation, conservation, and outdoor skills.\\n\\n\" +\n          \n          \"Write a 500-900 word HTML article based on the news story below.\\n\\n\" +\n          \"TITLE: \" + j.title + \"\\n\" +\n          \"URL: \" + j.link + \"\\n\" +\n          \"SUMMARY: \" + j.summary + \"\\n\\n\" +\n\n          \"Additionally:\\n\" +\n          \"- Generate 5–10 SEO-relevant tags based on the topic.\\n\" +\n          \"- At the very end of the article (inside the <content> field), include a final paragraph:\\n\" +\n          \"  <p><em>Source: <a href='\" + j.link + \"' target='_blank' rel='noopener noreferrer'>\" + j.link + \"</a></em></p>\\n\\n\" +\n\n          \"IMPORTANT: Return your final answer in the following EXACT JSON structure:\\n\\n\" +\n          \"{\\n\" +\n          \"  \\\"title\\\": \\\"SEO-optimized article title (plain text, no HTML)\\\",\\n\" +\n          \"  \\\"excerpt\\\": \\\"2–3 sentence summary (plain text, no HTML)\\\",\\n\" +\n          \"  \\\"tags\\\": [\\\"tag1\\\", \\\"tag2\\\", \\\"tag3\\\"],\\n\" +\n          \"  \\\"content\\\": \\\"<h1>Title</h1><p>Full HTML article here...</p>\\\"\\n\" +\n          \"}\\n\\n\" +\n\n          \"Rules:\\n\" +\n          \"1. The 'title' field must NOT contain <h1>.\\n\" +\n          \"2. The 'content' field MUST include <h1>, <h2>, <p>, <ul>, etc.\\n\" +\n          \"3. The 'content' field MUST end with the <p><em>Source...</em></p> link.\\n\" +\n          \"4. The 'excerpt' must be short, plain text.\\n\" +\n          \"5. 'tags' must be an array of short strings.\\n\" +\n          \"6. Output ONLY valid JSON with double quotes — no markdown, no commentary.\\n\\n\" +\n\n          \"Tone: professional, educational, clear, structured.\"\n      }\n    ]\n  };\n\n  out.push({\n    json: {\n      body: JSON.stringify(body),\n      original_title: j.title,\n      original_link: j.link,\n      original_summary: j.summary\n    }\n  });\n}\n\nreturn out;\n\n"
+      },
+      "id": "8bcf1286-7db6-43b4-8aeb-5d9cc936f25a",
+      "name": "Build Claude Request",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -1200,
+        -2720
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openRouterApi",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json[\"body\"] }}",
+        "options": {}
+      },
+      "id": "87c6c5b8-444e-4400-9683-ba6a334e60e2",
+      "name": "Claude (OpenRouter)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -976,
+        -2720
+      ],
+      "credentials": {
+        "openRouterApi": {
+          "id": "rZPn5nHWZaQl1iYd",
+          "name": "OpenRouter-Test"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nlet xml = $json.data;\n\n// Fix unquoted attributes (href=, src=, data-*)\nxml = xml.replace(/(href|src|data-[a-zA-Z0-9_-]+)=([^\" >]+)/g, '$1=\"$2\"');\n\n// Escape invalid XML entities\nxml = xml.replace(/&(?!(amp|lt|gt|quot|apos|nbsp);)/g, '&amp;');\n\n// Remove CDATA wrappers\nxml = xml.replace(/<!\\[CDATA\\[(.*?)\\]\\]>/gs, '$1');\n\n// Remove script tags inside descriptions\nxml = xml.replace(/<script[\\s\\S]*?<\\/script>/gi, \"\");\n\n// Remove malformed self-closing tags like <div/>\nxml = xml.replace(/<[^ >]+\\/>/g, '');\n\nreturn { xml };\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1280,
+        -2928
+      ],
+      "id": "478e156a-bc8c-4923-9b2b-d5a18cd9f2da",
+      "name": "Clean HTML "
+    },
+    {
+      "parameters": {
+        "dataPropertyName": "xml",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [
+        -1088,
+        -2928
+      ],
+      "id": "deba2b38-0a7f-495a-8555-97d539f066bc",
+      "name": "XML"
+    },
+    {
+      "parameters": {
+        "jsCode": "const out = [];\n\nfunction getValue(v) {\n  if (Array.isArray(v)) return v[0];\n  if (typeof v === \"object\") return Object.values(v).join(\"\");\n  return v || \"\";\n}\n\nconst items = $json.rss?.channel?.item || [];\n\nfor (const item of items) {\n  const title = getValue(item.title);\n  const link = getValue(item.link);\n  const summary = getValue(item.description);\n\n  out.push({\n    json: { title, link, summary }\n  });\n}\n\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -944,
+        -2928
+      ],
+      "id": "5208d148-fb12-4a81-b88e-35fa27005f53",
+      "name": "Extract Items"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1456,
+        -2928
+      ],
+      "id": "87ea2b6f-ce13-451b-ae30-693251fe60cb",
+      "name": "Worker RSS"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.first().json.tags.map(tag => ({\n  json: { tagName: tag }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1600,
+        -2512
+      ],
+      "id": "58e9c9b7-a9e3-4889-924e-2d279dada396",
+      "name": "Split Tags"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.choices[0].message.content;\n\nlet parsed;\n\ntry {\n  parsed = JSON.parse(raw);\n} catch (e) {\n  throw new Error(\"Claude output is not valid JSON: \" + raw);\n}\n\nreturn [{ json: parsed }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -784,
+        -2720
+      ],
+      "id": "3f05c513-a898-41c8-82f3-0e232dd0378f",
+      "name": "Final Article"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -816,
+        -2320
+      ],
+      "id": "c0ecd6f7-9178-4a75-8c64-6f9466a35560",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "title": "={{$json.title}}",
+        "additionalFields": {
+          "content": "={{$json.content}}",
+          "categories": [
+            2
+          ],
+          "tags": "={{$json.tags}}"
+        }
+      },
+      "type": "n8n-nodes-base.wordpress",
+      "typeVersion": 1,
+      "position": [
+        -608,
+        -2128
+      ],
+      "id": "366b75d8-cf82-4d6a-aacb-a005bb3553c1",
+      "name": "Create a post",
+      "alwaysOutputData": true,
+      "credentials": {
+        "wordpressApi": {
+          "id": "iBneAEqJGfq0Xlv3",
+          "name": "Wordpress Test Creds"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://yoursite.com/wp-json/wp/v2/tags?search={{ $json[\"tagName\"] }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "wordpressApi",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1616,
+        -2240
+      ],
+      "id": "35493acd-935a-46f6-b9a2-47169f7d50fc",
+      "name": "Search Tags",
+      "alwaysOutputData": true,
+      "credentials": {
+        "wordpressApi": {
+          "id": "YgbYeGeMkqcIHDaY",
+          "name": "Tjournal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// We expect input to be an array of tag objects.\n// Extract only the IDs.\n\nconst tagIds = $input.all().map(item => item.json.id).filter(id => id !== undefined);\n\nreturn [\n  {\n    json: {\n      tags: tagIds\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1392,
+        -2224
+      ],
+      "id": "071e49a1-a971-41ce-a0a5-6956a1e833a3",
+      "name": "Normalize Tags1",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Expecting input like:\n// [ { \"tags\": [25, 22, 3, 19, 8, 4, 10] } ]\n\n// Get the first (and only) input item\nconst item = $input.item;\n\n// Safety check\nif (!item || !item.json) {\n  return [{ json: { tags: [] } }];\n}\n\n// Read the tags array\nconst arr = item.json.tags || [];\n\n// Keep only true integers\nconst cleaned = arr.filter(n => Number.isInteger(n));\n\n// Return one item again with cleaned tags\nreturn [\n  {\n    json: {\n      tags: cleaned\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1136,
+        -2224
+      ],
+      "id": "2ea306a5-7ac7-4449-91ab-1e2343fe1917",
+      "name": "Filter Tag ID's"
+    },
+    {
+      "parameters": {
+        "jsCode": "const out = [];\n\nfor (const item of $input.all()) {\n  const j = { ...item.json }; // shallow copy\n  delete j.tags;              // remove any leftover string tags\n  out.push({ json: j });\n}\n\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -992,
+        -2432
+      ],
+      "id": "e96e3a96-b6a8-4b5d-b6f3-d368dfe8d36a",
+      "name": "Strip Tags"
+    }
+  ],
+  "pinData": {
+    "Cron": [
+      {
+        "json": {}
+      }
+    ]
+  },
+  "connections": {
+    "Cron": {
+      "main": [
+        [
+          {
+            "node": "Worker RSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit To 1": {
+      "main": [
+        [
+          {
+            "node": "Normalize & Validate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize & Validate": {
+      "main": [
+        [
+          {
+            "node": "Build Claude Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Claude Request": {
+      "main": [
+        [
+          {
+            "node": "Claude (OpenRouter)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude (OpenRouter)": {
+      "main": [
+        [
+          {
+            "node": "Final Article",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean HTML ": {
+      "main": [
+        [
+          {
+            "node": "XML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "XML": {
+      "main": [
+        [
+          {
+            "node": "Extract Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Items": {
+      "main": [
+        [
+          {
+            "node": "Limit To 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Worker RSS": {
+      "main": [
+        [
+          {
+            "node": "Clean HTML ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Tags": {
+      "main": [
+        [
+          {
+            "node": "Search Tags",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Final Article": {
+      "main": [
+        [
+          {
+            "node": "Split Tags",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Strip Tags",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Create a post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Tags": {
+      "main": [
+        [
+          {
+            "node": "Normalize Tags1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Tags1": {
+      "main": [
+        [
+          {
+            "node": "Filter Tag ID's",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Tag ID's": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Strip Tags": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "0526ddcf-d5ba-441c-865d-d1f96a2983de",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "84011685c42acaa732bc04c7c1295208416d21dd4505d30d7abc5e2b9a100ed7"
+  },
+  "id": "HYPTE1kjuu0nrpCo",
+  "tags": []
+}
