@@ -8,7 +8,7 @@ This repository contains a complete n8n workflow that automatically:
 - Assigns WordPress categories
 - Publishes formatted posts directly to WordPress
 
-Originally built from scratch for **TaxidermyJournal.com**, a fully automated media platform created by **Clifford’s Webhole**, this workflow can be reused for *any* niche.
+Built from scratch a fully automated media platform created by **Clifford’s Webhole**, this workflow can be reused for *any* niche.
 
 ---
 
