@@ -1,3 +1,5 @@
+![Repository Banner](./banner.png)
+
 # 🧠 AI-Powered WordPress Auto-Publisher (n8n Workflow)
 ### Built by **Clifford’s Webhole** for *Open Source Community*
 
