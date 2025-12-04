@@ -54,8 +54,7 @@ Docker, cloud, or local install.
 | `screenshots/overview.png` | The n8n flow nodes screenshot.
 | `LICENSE` | MIT license granting free reuse. |
 
-Add your own screenshots as you see fit.
-
+![Overview](./screenshots/overview.png)
 ---
 
 ## 📥 Installation & Usage
