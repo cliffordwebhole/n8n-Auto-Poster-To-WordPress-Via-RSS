@@ -108,3 +108,8 @@ Learn more about Clifford’s work at:
 
 This project is released under the **MIT License** (see `LICENSE` file).  
 You are free to use, modify, and share it — just credit Clifford’s Webhole.
+---
+
+### 🚀 Built by **Clifford’s Webhole**
+Developer • AI Systems • Linux • Web Automation  
+If this project helps you, please ⭐ the repo!
