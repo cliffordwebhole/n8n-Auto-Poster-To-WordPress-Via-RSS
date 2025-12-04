@@ -51,7 +51,7 @@ Docker, cloud, or local install.
 | File | Description |
 |------|-------------|
 | `workflow.json` | The complete n8n workflow. Import directly into n8n. |
-| `screenshots/flow.png` | The n8n flow nodes screenshot.
+| `screenshots/overview.png` | The n8n flow nodes screenshot.
 | `LICENSE` | MIT license granting free reuse. |
 
 Add your own screenshots as you see fit.
